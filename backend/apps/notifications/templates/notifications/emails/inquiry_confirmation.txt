@@ -1,0 +1,20 @@
+STONECREST · DUBAI
+
+Confirmation
+Thank you for writing.
+
+Hi {{ name }},
+
+We have received your enquiry{% if property_title %} regarding {{ property_title }}{% endif %} and will respond with the discretion your request deserves.
+{% if property_title %}
+Regarding: {{ property_title }}{% if property_community %} — {{ property_community }}{% if property_city %}, {{ property_city }}{% endif %}{% endif %}
+{% if property_url %}{{ property_url }}
+{% endif %}{% endif %}
+Should anything change in the meantime, reply to this email or write to hello@stonecrestdxb.com.
+
+With care,
+The Stonecrest team
+
+—
+Stonecrest · Dubai, United Arab Emirates
+hello@stonecrestdxb.com · © {{ year }}

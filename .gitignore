@@ -64,3 +64,6 @@ Thumbs.db
 *.pid
 celerybeat-schedule
 celerybeat.pid
+
+project-reqs.txt
+images/

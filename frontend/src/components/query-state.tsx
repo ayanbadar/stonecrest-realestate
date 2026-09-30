@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
+import { TextButton } from "@/components/brand/text-link";
 
 type QueryStateProps = {
   isLoading?: boolean;
@@ -26,22 +26,23 @@ export function QueryState({
 }: QueryStateProps) {
   if (isLoading) {
     return (
-      <p className="text-sm text-muted-foreground" role="status">
-        Loading…
-      </p>
+      <div className="py-16" role="status">
+        <p className="label-caps text-muted-foreground">Loading</p>
+        <div className="mt-6 h-px w-16 animate-pulse bg-foreground/30" />
+      </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-5 py-16">
         <p className="text-sm text-destructive" role="alert">
           {errorMessage}
         </p>
         {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+          <TextButton type="button" tone="outline-dark" onClick={onRetry}>
             Retry
-          </Button>
+          </TextButton>
         ) : null}
       </div>
     );
@@ -49,7 +50,7 @@ export function QueryState({
 
   if (isEmpty) {
     return (
-      <p className="text-sm text-muted-foreground" role="status">
+      <p className="py-16 text-sm text-muted-foreground" role="status">
         {emptyMessage}
       </p>
     );

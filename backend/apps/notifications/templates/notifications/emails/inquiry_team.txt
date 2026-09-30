@@ -1,0 +1,19 @@
+STONECREST · DUBAI
+
+Enquiry · #{{ inquiry_id }}
+A new private consultation request.
+
+{{ name }} has written through Stonecrest. Reply to continue the conversation.
+
+Name: {{ name }}
+Email: {{ email }}
+{% if phone %}Phone: {{ phone }}
+{% endif %}{% if property_title %}Residence: {{ property_title }}{% if property_community %} ({{ property_community }}{% if property_city %}, {{ property_city }}{% endif %}){% endif %}
+{% if property_url %}{{ property_url }}
+{% endif %}{% endif %}
+Message:
+{{ message }}
+
+—
+Stonecrest · Dubai, United Arab Emirates
+hello@stonecrestdxb.com · © {{ year }}

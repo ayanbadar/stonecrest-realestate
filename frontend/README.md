@@ -1,6 +1,6 @@
-# Meraki Interiors — Frontend
+# Stonecrest Real Estate — Frontend
 
-Production-ready React application foundation.
+Production-ready React application for Stonecrest Real Estate.
 
 ## Stack
 

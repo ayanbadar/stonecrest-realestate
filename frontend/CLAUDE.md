@@ -1,6 +1,6 @@
-# Meraki Interiors Frontend
+# Stonecrest Real Estate Frontend
 
-This repository is a production-ready React application foundation.
+This repository is a production-ready React application for Stonecrest Real Estate.
 Future agents **must** follow the architecture and conventions below.
 
 If architecture changes, update this file in the same change. Do not let agent context go stale.

@@ -1,22 +1,30 @@
+name: stonecrest
+
 services:
   db:
     image: postgres:16-alpine
+    container_name: stonecrest-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-meraki}
-      POSTGRES_USER: ${POSTGRES_USER:-meraki}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meraki}
+      POSTGRES_DB: ${POSTGRES_DB:-stonecrest}
+      POSTGRES_USER: ${POSTGRES_USER:-stonecrest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stonecrest}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - stonecrest_postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-meraki} -d ${POSTGRES_DB:-meraki}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-stonecrest} -d ${POSTGRES_DB:-stonecrest}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7-alpine
+    container_name: stonecrest-redis
     ports:
       - "6379:6379"
     healthcheck:
@@ -27,26 +35,29 @@ services:
 
   backend:
     build: .
-    image: meraki-backend
+    image: stonecrest-backend
+    container_name: stonecrest-backend
     env_file:
       - .env
     ports:
       - "8000:8000"
     volumes:
-      - media_data:/app/media
+      - stonecrest_media_data:/app/media
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
 
   celery_worker:
-    image: meraki-backend
+    image: stonecrest-backend
+    container_name: stonecrest-celery-worker
     command: celery -A config worker -l info
     env_file:
       - .env
     volumes:
-      - media_data:/app/media
+      - stonecrest_media_data:/app/media
     depends_on:
       db:
         condition: service_healthy
@@ -54,9 +65,11 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
+    restart: unless-stopped
 
   celery_beat:
-    image: meraki-backend
+    image: stonecrest-backend
+    container_name: stonecrest-celery-beat
     command: celery -A config beat -l info
     env_file:
       - .env
@@ -67,7 +80,8 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
-  media_data:
+  stonecrest_postgres_data:
+  stonecrest_media_data:
