@@ -1,5 +1,12 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
+import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from "axios";
 
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  setAccessToken,
+  setTokens,
+} from "@/lib/auth/tokens";
 import { env } from "@/lib/env";
 
 export class ApiError extends Error {
@@ -24,6 +31,28 @@ export class ApiError extends Error {
   }
 }
 
+type DrfErrorBody = {
+  message?: string;
+  detail?: string | Array<{ msg?: string }>;
+  code?: string;
+  [key: string]: unknown;
+};
+
+function extractDrfMessage(data: DrfErrorBody | undefined, fallback: string): string {
+  if (!data) return fallback;
+
+  if (typeof data.detail === "string") return data.detail;
+  if (typeof data.message === "string") return data.message;
+
+  for (const value of Object.values(data)) {
+    if (Array.isArray(value) && typeof value[0] === "string") {
+      return value[0];
+    }
+  }
+
+  return fallback;
+}
+
 function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) {
     return error;
@@ -31,10 +60,9 @@ function toApiError(error: unknown): ApiError {
 
   if (error instanceof AxiosError) {
     const status = error.response?.status;
-    const data = error.response?.data as
-      { message?: string; code?: string } | undefined;
+    const data = error.response?.data as DrfErrorBody | undefined;
 
-    return new ApiError(data?.message ?? error.message ?? "Request failed", {
+    return new ApiError(extractDrfMessage(data, error.message || "Request failed"), {
       status,
       code: data?.code,
       details: data,
@@ -49,6 +77,35 @@ function toApiError(error: unknown): ApiError {
   return new ApiError("An unexpected error occurred", { details: error });
 }
 
+type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const refresh = getRefreshToken();
+  if (!refresh) {
+    clearTokens();
+    throw new Error("No refresh token");
+  }
+
+  const { data } = await axios.post<{ access: string; refresh?: string }>(
+    `${env.VITE_API_URL}/auth/refresh/`,
+    { refresh },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    },
+  );
+
+  setAccessToken(data.access);
+  if (data.refresh) {
+    setTokens(data.access, data.refresh);
+  }
+  return data.access;
+}
+
 function createApiClient(): AxiosInstance {
   const client = axios.create({
     baseURL: env.VITE_API_URL,
@@ -59,10 +116,49 @@ function createApiClient(): AxiosInstance {
     timeout: 30_000,
   });
 
+  client.interceptors.request.use((config) => {
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Let the browser set multipart boundary for FormData uploads.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      config.headers.set("Content-Type", false);
+    }
+    return config;
+  });
+
   client.interceptors.response.use(
     (response) => response,
-    (error: unknown) => {
-      // Future: handle 401/403 auth redirects here.
+    async (error: unknown) => {
+      if (!(error instanceof AxiosError) || !error.config) {
+        return Promise.reject(toApiError(error));
+      }
+
+      const config = error.config as RetriableConfig;
+      const status = error.response?.status;
+      const isAuthUrl = Boolean(
+        config.url?.includes("/auth/login/") ||
+          config.url?.includes("/auth/logout/") ||
+          config.url?.includes("/auth/refresh/") ||
+          config.url?.includes("/auth/forgot-password/") ||
+          config.url?.includes("/auth/reset-password/"),
+      );
+
+      if (status === 401 && !config._retry && !isAuthUrl && getRefreshToken()) {
+        config._retry = true;
+        try {
+          refreshPromise ??= refreshAccessToken().finally(() => {
+            refreshPromise = null;
+          });
+          const access = await refreshPromise;
+          config.headers.Authorization = `Bearer ${access}`;
+          return client(config);
+        } catch {
+          clearTokens();
+        }
+      }
+
       return Promise.reject(toApiError(error));
     },
   );

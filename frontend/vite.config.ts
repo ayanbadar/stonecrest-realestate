@@ -8,6 +8,10 @@ import { defineConfig } from "vitest/config";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  server: {
+    port: 3000,
+    host: true,
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

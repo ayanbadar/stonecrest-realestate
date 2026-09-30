@@ -1,4 +1,4 @@
-.PHONY: up down build logs migrate superuser shell test restart
+.PHONY: up down build logs migrate seed superuser shell test restart
 
 up:
 	docker compose up --build -d
@@ -14,6 +14,9 @@ logs:
 
 migrate:
 	docker compose exec backend python manage.py migrate
+
+seed:
+	docker compose exec backend python manage.py seed_residencies
 
 superuser:
 	docker compose exec backend python manage.py createsuperuser
